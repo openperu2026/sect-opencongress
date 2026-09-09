@@ -471,6 +471,147 @@ def test_find_organization_with_congreso_fallback_null_parent_hit(session):
     assert found.org_id == orphan_joint_committee.org_id
 
 
+def test_resolve_organization_match_tiers(session):
+    """All four MatchTier outcomes, directly against
+    resolve_organization_match. Accent differences are used to force a
+    fuzzy (not exact) match deterministically -- Jaro-Winkler + unaccent
+    scores these ~1.0, but the tier function's own exact check is a plain
+    strip().lower() (no unaccent), so it correctly falls through to the
+    fuzzy tiers."""
+    diputados = crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    existing = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comisión de Salud",
+            org_type="Comisión",
+            org_link="https://congreso.gob.pe/comision-salud",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+
+    exact_tier, exact_match = crud_core.resolve_organization_match(
+        session,
+        schema.Organization(org_name="Comisión de Salud", org_type="Comisión"),
+        diputados.org_id,
+    )
+    assert exact_tier == crud_core.MatchTier.EXACT
+    assert exact_match.org_id == existing.org_id
+
+    corroborated_tier, corroborated_match = crud_core.resolve_organization_match(
+        session,
+        schema.Organization(
+            org_name="Comision de Salud",  # missing accent -- fuzzy, not exact
+            org_type="Comisión",
+            org_link="https://congreso.gob.pe/comision-salud",  # matches existing
+        ),
+        diputados.org_id,
+    )
+    assert corroborated_tier == crud_core.MatchTier.FUZZY_CORROBORATED
+    assert corroborated_match.org_id == existing.org_id
+
+    uncorroborated_tier, uncorroborated_match = crud_core.resolve_organization_match(
+        session,
+        schema.Organization(org_name="Comision de Salud", org_type="Comisión"),
+        diputados.org_id,
+    )
+    assert uncorroborated_tier == crud_core.MatchTier.FUZZY_UNCORROBORATED
+    assert uncorroborated_match.org_id == existing.org_id
+
+    none_tier, none_match = crud_core.resolve_organization_match(
+        session,
+        schema.Organization(
+            org_name="Comisión Totalmente Distinta", org_type="Comisión"
+        ),
+        diputados.org_id,
+    )
+    assert none_tier == crud_core.MatchTier.NO_MATCH
+    assert none_match is None
+
+
+def test_upsert_organization_fuzzy_uncorroborated_still_renames_in_shadow_mode(
+    session,
+):
+    """Default (ORG_UPSERT_STRICT_IDENTITY=False): a fuzzy match with no
+    corroborating signal still gets the old unconditional-overwrite
+    behavior -- shadow mode only logs what the stricter tier would decide,
+    it doesn't change behavior yet."""
+    assert crud_core.settings.ORG_UPSERT_STRICT_IDENTITY is False
+
+    crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    first = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comision de Educacion",
+            org_type="Comisión",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+    second = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comisión de Educación",
+            org_type="Comisión",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+
+    assert second.org_id == first.org_id
+    assert second.org_name == "Comisión de Educación"
+
+
+def test_upsert_organization_fuzzy_uncorroborated_protects_identity_when_strict(
+    session, monkeypatch
+):
+    """ORG_UPSERT_STRICT_IDENTITY=True: a fuzzy match with no corroborating
+    signal keeps its existing identity fields (org_name, parent_org_id)
+    untouched, but non-identity fields (org_link) still update -- and no
+    duplicate row gets created."""
+    monkeypatch.setattr(crud_core.settings, "ORG_UPSERT_STRICT_IDENTITY", True)
+
+    crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    first = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comision de Educacion",
+            org_type="Comisión",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+    second = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comisión de Educación",
+            org_type="Comisión",
+            org_link="https://new-link.example",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+
+    assert second.org_id == first.org_id
+    assert second.org_name == "Comision de Educacion"
+    assert second.org_link == "https://new-link.example"
+    assert (
+        session.query(db_models.Organization)
+        .filter(db_models.Organization.org_type == "Comisión")
+        .count()
+        == 1
+    )
+
+
 def test_upsert_model_writes_explicit_none_when_field_in_fields_set(session):
     """The coalesce-skips-None rule in _upsert_model (see its own docstring
     comment) has one correct override: fields_set lets a caller assert a

@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from typing import Type
 from enum import Enum
 
+from loguru import logger
+
 from backend import TypeOrganization
+from backend.config import settings
 from backend.core.constants import WHOLE_CONGRESS_ORG_NAME
 from backend.process.utils import normalize_name
 from backend.database import models as db_models
@@ -393,6 +396,66 @@ def upsert_congresista(
     )
 
 
+class MatchTier(str, Enum):
+    """How confidently an incoming Organization schema matches an existing
+    row, most to least confident. Drives whether upsert_organization is
+    willing to overwrite identity fields (org_name, parent_org_id) on that
+    row -- see resolve_organization_match."""
+
+    EXACT = "exact"
+    FUZZY_CORROBORATED = "fuzzy_corroborated"
+    FUZZY_UNCORROBORATED = "fuzzy_uncorroborated"
+    NO_MATCH = "no_match"
+
+
+def _organization_match_corroborates(
+    incoming: schema.Organization, existing: db_models.Organization
+) -> bool:
+    """A fuzzy name match is only as trustworthy as some second, independent
+    signal agreeing with it. org_link (the source page URL) and org_subtype
+    are both scraped/derived independently of the name text itself, so
+    either one matching is evidence this is genuinely the same organization
+    re-scraped, not a coincidentally-similar different one. Either side
+    being unset counts as "no evidence," never as a match."""
+    if incoming.org_link and existing.org_link:
+        if incoming.org_link.strip() == existing.org_link.strip():
+            return True
+    if incoming.org_subtype is not None and existing.org_subtype:
+        if _enum_value(incoming.org_subtype) == existing.org_subtype:
+            return True
+    return False
+
+
+def resolve_organization_match(
+    db: Session, schema: schema.Organization, parent_id: int | None
+) -> tuple[MatchTier, db_models.Organization | None]:
+    """Classify how confidently `schema` matches an existing Organization
+    row scoped to `parent_id` (the org_uniq-consistent parent already
+    resolved by the caller).
+
+    A slug/natural-key column was deliberately not introduced for this --
+    it would only move the fuzzy-matching problem to "map scraped text to a
+    slug" without eliminating it, and committees do get legitimately
+    renamed by Congress over time, so "identity = frozen name" isn't fully
+    correct either. This tiering is the alternative: trust an exact match
+    fully, trust a fuzzy match only with corroborating evidence, and never
+    silently guess otherwise.
+    """
+    match = find_organization(
+        db, schema.org_name, schema.org_type, parent_org_id=parent_id
+    )
+    if match is None:
+        return MatchTier.NO_MATCH, None
+
+    if schema.org_name.strip().lower() == match.org_name.strip().lower():
+        return MatchTier.EXACT, match
+
+    if _organization_match_corroborates(schema, match):
+        return MatchTier.FUZZY_CORROBORATED, match
+
+    return MatchTier.FUZZY_UNCORROBORATED, match
+
+
 def upsert_organization(
     db: Session, schema: schema.Organization
 ) -> db_models.Organization:
@@ -429,14 +492,29 @@ def upsert_organization(
     if payload.get("org_subtype") is not None:
         payload["org_subtype"] = _enum_value(payload["org_subtype"])
 
-    # Scope the existing-row check by parent_org_id, matching the real
-    # org_uniq constraint (org_name, org_type, parent_org_id) — without this,
-    # two same-named orgs under different parents (e.g. a same-named
-    # committee under each chamber) would collide and silently overwrite
-    # each other's parent_org_id.
-    existing = find_organization(
-        db, schema.org_name, schema.org_type, parent_org_id=parent_id
-    )
+    tier, existing = resolve_organization_match(db, schema, parent_id)
+
+    if tier == MatchTier.FUZZY_UNCORROBORATED:
+        logger.warning(
+            f"[org-upsert] fuzzy match with no corroborating signal: incoming "
+            f"org_name={schema.org_name!r} org_type={schema.org_type} "
+            f"parent_org_id={parent_id} matched existing org_id={existing.org_id} "
+            f"org_name={existing.org_name!r} -- "
+            + (
+                "identity fields (org_name, parent_org_id) not overwritten "
+                "(ORG_UPSERT_STRICT_IDENTITY=True)."
+                if settings.ORG_UPSERT_STRICT_IDENTITY
+                else "would NOT overwrite identity fields if "
+                "ORG_UPSERT_STRICT_IDENTITY were enabled (shadow mode)."
+            )
+        )
+        if settings.ORG_UPSERT_STRICT_IDENTITY:
+            # Don't touch identity fields on an unconfirmed match -- only
+            # non-identity fields (dates, subtype/link if newly learned)
+            # get updated. Still the same row, never a duplicate insert.
+            payload.pop("org_name", None)
+            payload.pop("parent_org_id", None)
+            fields_set.discard("parent_org_id")
 
     return _upsert_model(
         db,

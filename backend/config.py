@@ -110,6 +110,21 @@ class Settings(BaseSettings):
     # this stays a single source of truth rather than a second literal.
     LEG_PERIOD: str = os.getenv("LEG_PERIOD", LegPeriod.PERIODO_2026_2031.value)
 
+    # Organizations have no stable natural key -- they're matched by fuzzy
+    # name+type+parent similarity (see resolve_organization_match in
+    # pipeline_core.py), so a fuzzy match with no corroborating signal
+    # (matching org_link/org_subtype) could be the same organization with
+    # cosmetic label drift, or a coincidentally similar but different one.
+    # When this is False (default), such a match still gets the old
+    # unconditional overwrite-on-match behavior, but a warning is logged
+    # showing what would happen if this were True. When True, that match no
+    # longer overwrites identity fields (org_name, parent_org_id) on the
+    # matched row -- only non-identity fields are updated. Meant to be
+    # enabled only after reviewing a period of warning logs across real
+    # scrape traffic, to gauge how often uncorroborated matches occur before
+    # tightening behavior.
+    ORG_UPSERT_STRICT_IDENTITY: bool = False
+
     # This is only in case we need some API_KEYS. Allow us to handle safely.
     model_config = ConfigDict(env_file=directories.ROOT_DIR / ".env", extra="allow")
 
