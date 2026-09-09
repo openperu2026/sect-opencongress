@@ -1656,17 +1656,27 @@ class OpenPeruOrchestrator:
                         # scoped by chamber_org_id — only committee/admin/bancada
                         # memberships (from process_cong_memberships) are actually
                         # children of this congresista's chamber.
-                        ms_parent_org_id = (
-                            chamber_org_id
-                            if ms.org_type not in _CHAMBER_UNSCOPED_ORG_TYPES
-                            else None
-                        )
-                        org = crud_core.find_organization(
-                            db=db,
-                            org_name=ms.org_name,
-                            org_type=ms.org_type,
-                            parent_org_id=ms_parent_org_id,
-                        )
+                        if ms.org_type in _CHAMBER_UNSCOPED_ORG_TYPES:
+                            org = crud_core.find_organization(
+                                db=db,
+                                org_name=ms.org_name,
+                                org_type=ms.org_type,
+                                parent_org_id=None,
+                            )
+                        else:
+                            # Committee/admin/bancada memberships are usually
+                            # children of this congresista's own chamber, but
+                            # some are genuinely joint, whole-Congress bodies
+                            # (Comisión Permanente, Comisión Bicameral de
+                            # Presupuesto...) parented under
+                            # WHOLE_CONGRESS_ORG_NAME instead -- see
+                            # CHAMBER_LABEL_TO_ORG_NAME.
+                            org = crud_core.find_organization_with_congreso_fallback(
+                                db,
+                                org_name=ms.org_name,
+                                org_type=ms.org_type,
+                                own_parent_org_id=chamber_org_id,
+                            )
                         if org is None:
                             logger.warning(
                                 f"Skipping Membership org_name={ms.org_name} for org_type={ms.org_type} and Congresista={cong.full_name}"
@@ -2074,17 +2084,26 @@ class OpenPeruOrchestrator:
                         # CHAMBER) must NOT be scoped by chamber.org_id as
                         # its own parent — only committee-type entries are
                         # actually children of this entity's chamber.
-                        org_parent_org_id = (
-                            chamber.org_id
-                            if org_schema.org_type != TypeOrganization.CHAMBER
-                            else None
-                        )
-                        org = crud_core.find_organization(
-                            db=db,
-                            org_name=org_schema.org_name,
-                            org_type=org_schema.org_type,
-                            parent_org_id=org_parent_org_id,
-                        )
+                        if org_schema.org_type == TypeOrganization.CHAMBER:
+                            org = crud_core.find_organization(
+                                db=db,
+                                org_name=org_schema.org_name,
+                                org_type=org_schema.org_type,
+                                parent_org_id=None,
+                            )
+                        else:
+                            # Usually a child of this bill/motion's own
+                            # chamber, but some committees are genuinely
+                            # joint, whole-Congress bodies (Comisión
+                            # Bicameral de Presupuesto...) parented under
+                            # WHOLE_CONGRESS_ORG_NAME instead -- see
+                            # CHAMBER_LABEL_TO_ORG_NAME.
+                            org = crud_core.find_organization_with_congreso_fallback(
+                                db,
+                                org_name=org_schema.org_name,
+                                org_type=org_schema.org_type,
+                                own_parent_org_id=chamber.org_id,
+                            )
                         if org is None:
                             logger.warning(
                                 f"Skipping {config.entity_label}Organization {config.id_field}={entity.id}, org={org_schema.org_name}, org_type={org_schema.org_type}: organization not found"
@@ -2128,10 +2147,17 @@ class OpenPeruOrchestrator:
                     stats.processed += 1
                     db.commit()
                 except Exception as exc:
+                    # Roll back before touching raw_row's attributes: a prior
+                    # iteration's db.commit() expires every object still
+                    # attached to this session (expire_on_commit defaults to
+                    # True), so accessing raw_row.id while the session is
+                    # still in "rollback required" state after a failed
+                    # flush fires a reload query and raises
+                    # PendingRollbackError instead of logging the real error.
+                    db.rollback()
                     logger.exception(
                         f"Error processing Raw{config.entity_label} id={raw_row.id}: {exc}"
                     )
-                    db.rollback()
                     stats.errors += 1
 
         logger.info(

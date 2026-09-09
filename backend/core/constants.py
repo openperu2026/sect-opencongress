@@ -90,22 +90,38 @@ PROCESSABLE_LEG_PERIODS = [
     "Parlamentario 2026 - 2031",
 ]
 
+# The whole-Congress body: parent for both legacy (2021-2026, unicameral)
+# entities and 2026-2031 joint/bicameral entities (e.g. "Comisión Permanente",
+# "Comisión Bicameral de Presupuesto y Cuenta General de la República") --
+# confirmed 2026-09-08 as a real, distinct top-level Organization (not NULL
+# parent, not "Cámara de Diputados") kept deliberately separate so
+# 2021-2026-term data never gets conflated with the 2026-2031 bicameral
+# chambers.
+WHOLE_CONGRESS_ORG_NAME = "Congreso de la República"
+
 # Maps a raw scraped chamber label (RawCongresista.chamber / RawBancada.chamber /
 # RawCommittee.chamber / RawOrganization.chamber) to the canonical parent
-# Organization name. Two distinct "no specific chamber" cases:
-#   - None: not specified / legacy pre-2026 data — defaults to Diputados to
-#     preserve existing 2021-2026 behavior byte-for-byte.
-#   - "Congreso": a CONFIRMED joint/bicameral entity (e.g. "Comisión Permanente",
-#     "Comisión Bicameral de Presupuesto y Cuenta General de la República") that
-#     genuinely has no chamber parent — maps to None (no parent), not Diputados.
+# Organization name. Two distinct "no specific chamber" cases, both resolving
+# to WHOLE_CONGRESS_ORG_NAME:
+#   - None: not specified / legacy pre-2026 data. This constant previously
+#     mapped None to "Cámara de Diputados", which was never correct for this
+#     data (every pre-existing 2021-2026 standing/special committee in
+#     production is parented under WHOLE_CONGRESS_ORG_NAME) and caused every
+#     legacy committee lookup scoped by that default to silently miss
+#     ("organization not found").
+#   - "Congreso": a CONFIRMED joint/bicameral entity for the 2026-2031 term.
+#     Previously mapped to None (no parent at all); unified with the legacy
+#     case above so every joint/whole-Congress body -- legacy or bicameral --
+#     is a child of one real, stable parent instead of a mix of NULL-parent
+#     orphans and legacy-parented rows.
 # Any other value raises (KeyError), by design — see backend/database/orchestrator.py
 # per-row exception handling, which catches and counts this in stats.errors rather
 # than silently misattributing an unrecognized label to the wrong chamber.
 CHAMBER_LABEL_TO_ORG_NAME = {
     "Diputados": "Cámara de Diputados",
     "Senadores": "Senado de la República",
-    "Congreso": None,
-    None: "Cámara de Diputados",
+    "Congreso": WHOLE_CONGRESS_ORG_NAME,
+    None: WHOLE_CONGRESS_ORG_NAME,
 }
 
 # Per-chamber site roots for the 2026-2031 term (confirmed live 2026-08-31).

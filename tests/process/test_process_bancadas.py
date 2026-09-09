@@ -93,7 +93,7 @@ def test_process_bancada_senadores_chamber_sets_senado_parent(
     assert bancadas[0].parent_org_type == "Cámara"
 
 
-def test_process_bancada_chamber_none_defaults_to_diputados(
+def test_process_bancada_chamber_none_defaults_to_congreso_de_la_republica(
     html_one_bancada_one_member,
 ):
     rb = _raw_bancada(
@@ -105,7 +105,7 @@ def test_process_bancada_chamber_none_defaults_to_diputados(
 
     bancadas, _ = mod.process_bancada(rb)
 
-    assert bancadas[0].parent_org_name == "Cámara de Diputados"
+    assert bancadas[0].parent_org_name == "Congreso de la República"
 
 
 def test_process_bancada_current_period_no_override(

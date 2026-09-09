@@ -6,6 +6,7 @@ from backend.core.enums import Proponents, TypeOrganization
 from backend.database import models as db_models
 from backend.database.crud import pipeline_bills as crud_bills
 from backend.database.crud import pipeline_motions as crud_motions
+from backend.database.crud import pipeline_core as crud_core
 from backend.database.orchestrator import OpenPeruOrchestrator
 from backend.database.raw_models import (
     RawBancada,
@@ -129,8 +130,79 @@ def test_process_congresistas_creates_party_and_chamber_memberships(
             .filter(db_models.Organization.org_type == "Cámara")
             .one()
         )
-        assert chamber_org.org_name == "Cámara de Diputados"
+        # chamber=None is legacy (pre-2026) data -- resolves to the old
+        # unicameral "Congreso de la República" body, not either bicameral
+        # chamber (see CHAMBER_LABEL_TO_ORG_NAME[None]).
+        assert chamber_org.org_name == "Congreso de la República"
         assert chamber_org.parent_org_id is None
+
+
+def test_process_congresistas_finds_joint_administrative_membership_across_chambers(
+    orchestrator, monkeypatch
+):
+    """Regression for the _CHAMBER_UNSCOPED_ORG_TYPES false-negative
+    (2026-09-08 production incident): ADMINISTRATIVE/COMMITTEE memberships
+    were unconditionally scoped to the congresista's own chamber, but joint/
+    bicameral bodies like Comisión Permanente are genuinely top-level
+    (parent_org_id=NULL) and can never match a chamber-scoped lookup.
+    Confirms the NULL-parent fallback resolves it instead of skipping."""
+    monkeypatch.setattr(
+        "backend.database.orchestrator.get_cong_data", lambda path, **kwargs: {}
+    )
+
+    memberships_content = json.dumps(
+        {
+            "data": [
+                {
+                    "desOrgano": "Comisión Permanente",
+                    "desOrganoCongresista": "COMISIÓN PERMANENTE",
+                    "desCargo": "Titular",
+                    "fechaInicio": "2026-08-01T00:00:00",
+                    "fechaFin": None,
+                }
+            ]
+        }
+    )
+
+    with orchestrator.DBSession() as db:
+        # Seeded exactly as process_admin_org creates it for chamber="Congreso"
+        # (CHAMBER_LABEL_TO_ORG_NAME["Congreso"] is None): a genuine top-level
+        # joint entity, not scoped to either chamber.
+        crud_core.upsert_organization(
+            db,
+            schema.Organization(
+                org_name="Comisión Permanente", org_type="Administrativo"
+            ),
+        )
+        db.add(
+            RawCongresista(
+                id=1,
+                leg_period="Parlamentario 2021 - 2026",
+                chamber=None,
+                website="https://www.congreso.gob.pe/congresista/juan",
+                profile_content=_PROFILE_HTML,
+                memberships_content=memberships_content,
+                timestamp=datetime(2025, 8, 1),
+                last_update=True,
+                processed=False,
+                changed=True,
+            )
+        )
+        db.commit()
+
+    stats = orchestrator._process_congresistas()
+
+    assert stats.errors == 0
+    assert stats.skipped == 0
+
+    with orchestrator.DBSession() as db:
+        cong = db.query(db_models.Congresista).one()
+        admin_membership = (
+            db.query(db_models.Membership)
+            .filter(db_models.Membership.org_type == "Administrativo")
+            .one()
+        )
+        assert admin_membership.person_id == cong.id
 
 
 def test_process_congresistas_persists_earlier_rows_when_a_later_row_fails(
@@ -812,7 +884,7 @@ def test_process_bills_loads_bill_when_author_and_bancada_are_missing(orchestrat
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )
@@ -881,7 +953,7 @@ def test_process_bills_persists_earlier_rows_when_a_later_row_fails(
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )
@@ -947,7 +1019,7 @@ def test_process_bills_marks_raw_pages_processed_when_bill_text_extracted(
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )
@@ -1046,7 +1118,7 @@ def test_process_motions_loads_motion_when_author_is_missing(orchestrator):
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )
@@ -1111,7 +1183,7 @@ def test_process_motions_persists_earlier_rows_when_a_later_row_fails(
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )
@@ -1165,7 +1237,7 @@ def test_process_bills_sets_bancada_from_membership_as_of_presentation_date(
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )
@@ -1250,7 +1322,7 @@ def test_process_motions_sets_bancada_from_membership_as_of_presentation_date(
     with orchestrator.DBSession() as db:
         db.add(
             db_models.Organization(
-                org_name="Cámara de Diputados",
+                org_name="Congreso de la República",
                 org_type="Cámara",
             )
         )

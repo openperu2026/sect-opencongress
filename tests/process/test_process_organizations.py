@@ -149,13 +149,14 @@ def test_process_committee_senadores_chamber_sets_senado_parent(
     assert out[0].parent_org_type == "Cámara"
 
 
-def test_process_committee_congreso_chamber_is_parentless_joint_entity(
+def test_process_committee_congreso_chamber_is_whole_congress_joint_entity(
     committee_html_two_rows,
 ):
-    """Confirmed real 2026-08-31 (Step 0 item 11): joint/bicameral committees
-    like "Comisión Bicameral de Presupuesto..." genuinely have no chamber
-    parent -- must NOT default to Diputados like an unspecified/legacy None
-    would."""
+    """Confirmed real 2026-09-08: joint/bicameral committees like "Comisión
+    Bicameral de Presupuesto..." are children of "Congreso de la República"
+    (the whole-Congress body, shared with legacy 2021-2026 data) -- must NOT
+    default to either bicameral chamber, and (since the unification) must
+    NOT be parentless either."""
     raw = _raw_committee(
         raw_html=committee_html_two_rows,
         legislative_year="2026",
@@ -164,8 +165,8 @@ def test_process_committee_congreso_chamber_is_parentless_joint_entity(
 
     out = mod.process_committee(raw)
 
-    assert out[0].parent_org_name is None
-    assert out[0].parent_org_type is None
+    assert out[0].parent_org_name == "Congreso de la República"
+    assert out[0].parent_org_type == "Cámara"
 
 
 def test_process_committee_unrecognized_chamber_raises():
@@ -230,31 +231,39 @@ def test_process_admin_org_senadores_chamber_sets_senado_parent():
     assert org.parent_org_type == "Cámara"
 
 
-def test_process_admin_org_congreso_chamber_is_parentless_joint_entity():
-    """Confirmed real 2026-08-31 (Step 0 item 11): "Comisión Permanente" and
-    the bicameral budget committee remain single joint entities."""
+def test_process_admin_org_congreso_chamber_is_whole_congress_joint_entity():
+    """Confirmed real 2026-09-08: "Comisión Permanente" and the bicameral
+    budget committee are children of "Congreso de la República" (the
+    whole-Congress body), not parentless."""
     raw = _raw_org(raw_html="<table/>", legislative_year="2026", chamber="Congreso")
 
     org, _ = mod.process_admin_org(raw)
 
-    assert org.parent_org_name is None
-    assert org.parent_org_type is None
+    assert org.parent_org_name == "Congreso de la República"
+    assert org.parent_org_type == "Cámara"
 
 
-def test_process_admin_org_chamber_none_defaults_to_diputados():
+def test_process_admin_org_chamber_none_defaults_to_congreso_de_la_republica():
     raw = _raw_org(raw_html="<table/>", legislative_year="2024", chamber=None)
 
     org, _ = mod.process_admin_org(raw)
 
-    assert org.parent_org_name == "Cámara de Diputados"
+    assert org.parent_org_name == "Congreso de la República"
 
 
 def test_process_chambers_returns_correct_names():
     """Regression + correction: Senado's official name is "Senado de la
     República" (confirmed by the user directly, Step 0 item 9) -- the
-    original code hardcoded the wrong "Cámara de Senadores"."""
+    original code hardcoded the wrong "Cámara de Senadores". Also seeds
+    "Congreso de la República" (the pre-2026 unicameral body, kept distinct
+    so legacy data never gets conflated with the bicameral chambers --
+    confirmed 2026-09-08)."""
     chambers = mod.process_chambers()
 
     names = {c.org_name for c in chambers}
-    assert names == {"Cámara de Diputados", "Senado de la República"}
+    assert names == {
+        "Cámara de Diputados",
+        "Senado de la República",
+        "Congreso de la República",
+    }
     assert "Cámara de Senadores" not in names

@@ -8,6 +8,7 @@ from typing import Type
 from enum import Enum
 
 from backend import TypeOrganization
+from backend.core.constants import WHOLE_CONGRESS_ORG_NAME
 from backend.process.utils import normalize_name
 from backend.database import models as db_models
 from backend.process import schema
@@ -195,12 +196,25 @@ def save_alias(
     return False
 
 
+# Sentinel default for find_organization's parent_org_id: distinguishes
+# "caller doesn't care about parent, don't scope" (this sentinel) from
+# "caller wants a genuinely top-level org" (an explicit parent_org_id=None,
+# which now correctly compiles to a parent_org_id IS NULL filter). Before
+# this, None was overloaded to mean unscoped-search, so a caller couldn't
+# ask for a NULL-parent org without accidentally matching same-named orgs
+# under a real parent. Only chambers and parties are genuinely NULL-parent
+# today (joint/bicameral bodies are parented under WHOLE_CONGRESS_ORG_NAME,
+# see find_organization_with_congreso_fallback) -- NULL-parent joint-entity
+# rows may still exist transitionally from before that convention.
+_UNSCOPED = object()
+
+
 def find_organization(
     db: Session,
     org_name: str,
     org_type: TypeOrganization | str,
     threshold: float = 0.9,
-    parent_org_id: int | None = None,
+    parent_org_id: int | None | object = _UNSCOPED,
 ) -> db_models.Organization | None:
     """
     Find the closest organization by fuzzy name match and organization type.
@@ -208,10 +222,10 @@ def find_organization(
     parent_org_id: optionally scope the match to organizations under a specific
     parent. Needed because Organization.org_uniq is (org_name, org_type,
     parent_org_id) — two orgs can share a name+type under different parents
-    (e.g. a same-named committee under each chamber). Omit (or pass None) to
-    preserve prior unscoped behavior; None is never used to mean "match rows
-    with a NULL parent" since no two same-name/same-type orgs legitimately
-    share a NULL parent (top-level chambers and parties are each unique).
+    (e.g. a same-named committee under each chamber). Omit to search
+    unscoped (any parent). Pass an explicit org_id to require that parent, or
+    explicit None to require a NULL parent (genuinely top-level orgs, e.g.
+    joint/bicameral entities and chambers/parties themselves).
     """
 
     if isinstance(org_type, str):
@@ -228,7 +242,7 @@ def find_organization(
         db_models.Organization.org_type == org_type,
         score >= threshold,
     ]
-    if parent_org_id is not None:
+    if parent_org_id is not _UNSCOPED:
         filters.append(db_models.Organization.parent_org_id == parent_org_id)
 
     stmt = (
@@ -242,6 +256,47 @@ def find_organization(
     )
 
     return db.scalar(stmt)
+
+
+def find_organization_with_congreso_fallback(
+    db: Session,
+    org_name: str,
+    org_type: TypeOrganization | str,
+    *,
+    own_parent_org_id: int | None,
+) -> db_models.Organization | None:
+    """Look up an ADMINISTRATIVE/COMMITTEE organization scoped to its
+    caller-resolved own parent (e.g. a congresista's or bill's own chamber),
+    falling back to WHOLE_CONGRESS_ORG_NAME (the parent for joint/bicameral
+    bodies like "Comisión Permanente" and "Comisión Bicameral de
+    Presupuesto...", see CHAMBER_LABEL_TO_ORG_NAME) and finally to a bare
+    NULL parent (some joint-entity rows created before that convention was
+    unified may still be NULL-parent transitionally) when the scoped lookup
+    misses.
+
+    Never falls all the way back to an unscoped search: an unscoped retry
+    could cross-match a *different* chamber's same-named per-chamber org
+    (see test_find_organization_parent_org_id_scoping).
+    """
+    org = find_organization(
+        db, org_name=org_name, org_type=org_type, parent_org_id=own_parent_org_id
+    )
+    if org is not None:
+        return org
+
+    congreso = find_organization(
+        db, org_name=WHOLE_CONGRESS_ORG_NAME, org_type=TypeOrganization.CHAMBER
+    )
+    if congreso is not None:
+        org = find_organization(
+            db, org_name=org_name, org_type=org_type, parent_org_id=congreso.org_id
+        )
+        if org is not None:
+            return org
+
+    return find_organization(
+        db, org_name=org_name, org_type=org_type, parent_org_id=None
+    )
 
 
 def find_active_bancada_for_person(
@@ -282,6 +337,7 @@ def _upsert_model(
     | Type[db_models.Membership]
     | Type[db_models.Ley],
     payload: dict,
+    fields_set: set[str] | None = None,
 ) -> (
     db_models.Congresista
     | db_models.Organization
@@ -301,9 +357,18 @@ def _upsert_model(
     # Found 2026-09: this exact gap silently wiped dni/gender/first_name/
     # last_name for every reelected congresista matched against their
     # pre-existing legacy row.
+    #
+    # fields_set is the exception: a caller can pass the source schema's
+    # model_fields_set to assert "this field is None on purpose" (e.g. a
+    # committee reclassified as top-level, parent_org_id should become
+    # NULL) rather than "this field simply wasn't populated by this
+    # source" -- without it, a legitimate None could never be written once
+    # a row already has a non-null value.
     for key, value in payload.items():
         if value is not None:
             setattr(existing, key, value)
+        elif fields_set is not None and key in fields_set:
+            setattr(existing, key, None)
 
     db.flush()
     return existing
@@ -332,6 +397,7 @@ def upsert_organization(
     db: Session, schema: schema.Organization
 ) -> db_models.Organization:
     payload = schema.model_dump()
+    fields_set = set(schema.model_fields_set)
 
     parent_name = payload.pop("parent_org_name", None)
     parent_type = payload.pop("parent_org_type", None)
@@ -352,6 +418,12 @@ def upsert_organization(
         parent_id = parent.org_id
 
     payload["parent_org_id"] = parent_id
+    # parent_org_id is always authoritatively resolved above (a real parent
+    # org_id, or None for a genuinely top-level org like a joint/bicameral
+    # entity) -- always treat it as explicitly set so a corrected NULL
+    # parent actually gets written to an existing row, rather than silently
+    # coalesced away by _upsert_model's None-skip rule.
+    fields_set.add("parent_org_id")
 
     payload["org_type"] = _enum_value(payload["org_type"])
     if payload.get("org_subtype") is not None:
@@ -371,6 +443,7 @@ def upsert_organization(
         existing=existing,
         model=db_models.Organization,
         payload=payload,
+        fields_set=fields_set,
     )
 
 

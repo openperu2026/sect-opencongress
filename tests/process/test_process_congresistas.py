@@ -83,18 +83,25 @@ def test_process_profile_content_parses_fields_and_votes_int(
     assert cong.full_name == "Juan Alberto Perez Quispe"
     assert cong.website == "https://www.congreso.gob.pe/congresista/juan"
     assert cong.photo_url == "https://www.congreso.gob.pe/FotosCongresista/juan.jpg"
-    assert [org.org_name for org in orgs] == ["Accion Popular", "Cámara de Diputados"]
+    assert [org.org_name for org in orgs] == [
+        "Accion Popular",
+        "Congreso de la República",
+    ]
     assert memberships[0].org_name == "Accion Popular"
     assert memberships[1].votes_in_election == 12345
-    assert memberships[1].org_name == "Cámara de Diputados"
+    assert memberships[1].org_name == "Congreso de la República"
 
 
-def test_process_profile_content_chamber_none_is_byte_identical_to_diputados(
+def test_process_profile_content_chamber_none_resolves_to_congreso_de_la_republica(
     profile_html, dict_data_cong
 ):
-    """CRITICAL regression (Regression Rule #3): chamber=None is what every
-    historical 2021-2026 row has -- must produce identical output to an
-    explicit chamber="Diputados" row, and to pre-change behavior."""
+    """chamber=None is what every historical 2021-2026 row has -- confirmed
+    2026-09-08 against production data that this must resolve to the old
+    unicameral "Congreso de la República" body, distinct from an explicit
+    chamber="Diputados" row (2026-2031 term). Previously these were required
+    to be byte-identical (both defaulting to "Cámara de Diputados"), which is
+    exactly what caused every legacy committee/organization lookup to
+    silently miss in production."""
     raw_none = _raw_cong(
         profile_content=profile_html, leg_period="2021-2026", chamber=None
     )
@@ -109,8 +116,7 @@ def test_process_profile_content_chamber_none_is_byte_identical_to_diputados(
         raw_diputados, dict_data_cong
     )
 
-    assert [o.org_name for o in orgs_none] == [o.org_name for o in orgs_diputados]
-    assert memberships_none[1].org_name == "Cámara de Diputados"
+    assert memberships_none[1].org_name == "Congreso de la República"
     assert memberships_diputados[1].org_name == "Cámara de Diputados"
     assert memberships_none[1].role == memberships_diputados[1].role
 

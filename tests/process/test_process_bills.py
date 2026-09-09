@@ -234,7 +234,7 @@ def test_process_bill_organizations_uses_step_committees_only_and_dates():
 
     assert [org.org_name for org in orgs] == [
         "Comisión de Economía",
-        "Cámara de Diputados",
+        "Congreso de la República",
     ]
     committee = orgs[0]
     assert committee.org_type == "Comisión"
@@ -252,7 +252,7 @@ def test_process_bill_organizations_no_steps_uses_raw_presentation_date():
     orgs = mod.process_bill_organizations(rb, [])
 
     assert len(orgs) == 1
-    assert orgs[0].org_name == "Cámara de Diputados"
+    assert orgs[0].org_name == "Congreso de la República"
     assert orgs[0].presentation_date.isoformat() == "2026-01-10"
 
 
@@ -277,15 +277,18 @@ def test_process_bill_organizations_diputados_id_resolves_to_diputados():
     assert orgs[0].org_name == "Cámara de Diputados"
 
 
-def test_process_bill_organizations_legacy_id_defaults_to_diputados():
+def test_process_bill_organizations_legacy_id_defaults_to_congreso_de_la_republica():
     """Regression: legacy ids ("{year}_{number}") have no -S/-CD suffix and
-    must keep defaulting to Diputados, unchanged."""
+    resolve to the old unicameral "Congreso de la República" body, not
+    either bicameral chamber (see CHAMBER_LABEL_TO_ORG_NAME[None]) --
+    confirmed 2026-09-08 against production data, where every pre-existing
+    2021-2026 standing committee is parented under it."""
     rb = _raw_bill(id="2021_14864", steps=[])
 
     orgs = mod.process_bill_organizations(rb, [])
 
     assert len(orgs) == 1
-    assert orgs[0].org_name == "Cámara de Diputados"
+    assert orgs[0].org_name == "Congreso de la República"
 
 
 def test_process_bill_text_extracts_body_from_ordered_pages():

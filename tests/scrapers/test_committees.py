@@ -731,9 +731,10 @@ _JOINT_COMMITTEE_PAGE_HTML = """
 
 def test_get_joint_committees_builds_congreso_tagged_committee(monkeypatch):
     """CRITICAL: proves the joint committee scrape resolves through
-    process_committee() as a parentless (chamber="Congreso") entity --
-    the member table itself is irrelevant (existence-only scrape, see
-    get_joint_committees' docstring), only the <h1> name is used."""
+    process_committee() as a child of "Congreso de la República" (the
+    whole-Congress body, chamber="Congreso") -- the member table itself is
+    irrelevant (existence-only scrape, see get_joint_committees'
+    docstring), only the <h1> name is used."""
     from backend.process.organizations import process_committee
 
     scraper = make_scraper()
@@ -758,8 +759,8 @@ def test_get_joint_committees_builds_congreso_tagged_committee(monkeypatch):
         == "Comisión Bicameral de Presupuesto y Cuenta General de la República"
     )
     assert org.org_subtype == "Comisión Bicameral"
-    assert org.parent_org_name is None
-    assert org.parent_org_type is None
+    assert org.parent_org_name == "Congreso de la República"
+    assert org.parent_org_type == "Cámara"
 
 
 def test_get_joint_committees_skips_page_missing_h1(monkeypatch):

@@ -26,6 +26,17 @@ def process_chambers() -> list[Organization]:
             org_subtype=None,
             org_link="www.congreso.gob.pe/senado",
         ),
+        # The pre-2026 unicameral body -- kept as its own top-level chamber
+        # (see CHAMBER_LABEL_TO_ORG_NAME[None]) so 2021-2026-term data never
+        # gets conflated with the bicameral chambers above. Seeded here so a
+        # fresh database self-provisions it instead of depending on a manual
+        # insert.
+        Organization(
+            org_name="Congreso de la República",
+            org_type="Cámara",
+            org_subtype=None,
+            org_link="www.congreso.gob.pe",
+        ),
     ]
 
 

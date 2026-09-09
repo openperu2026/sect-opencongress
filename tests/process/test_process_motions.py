@@ -204,7 +204,7 @@ def test_process_motion_organizations_chamber_only_and_dates():
     orgs = mod.process_motion_organizations(rm, motion_steps)
 
     assert len(orgs) == 1
-    assert orgs[0].org_name == "Cámara de Diputados"
+    assert orgs[0].org_name == "Congreso de la República"
     assert orgs[0].org_type == "Cámara"
     assert orgs[0].presentation_date.isoformat() == "2026-01-01"
     assert orgs[0].decision_date.isoformat() == "2026-01-07"
@@ -216,7 +216,7 @@ def test_process_motion_organizations_no_steps_uses_raw_presentation_date():
     orgs = mod.process_motion_organizations(rm, [])
 
     assert len(orgs) == 1
-    assert orgs[0].org_name == "Cámara de Diputados"
+    assert orgs[0].org_name == "Congreso de la República"
     assert orgs[0].presentation_date.isoformat() == "2026-01-10"
 
 

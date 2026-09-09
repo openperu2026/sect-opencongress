@@ -351,6 +351,160 @@ def test_find_organization_parent_org_id_scoping(session):
     assert none_found is None
 
 
+def test_find_organization_explicit_none_parent_requires_null_parent(session):
+    """parent_org_id=None must mean "require a NULL parent" (a genuinely
+    top-level org, e.g. a joint/bicameral entity like Comisión Permanente),
+    never "unscoped" -- that overload previously let a top-level lookup
+    cross-match a per-chamber org sharing the same name+type under a real
+    parent (2026-09-08 regression: this is what made joint-entity membership
+    lookups impossible to express safely without risking a cross-chamber
+    false match)."""
+    crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    scoped_committee = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comisión Permanente",
+            org_type="Comisión",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+    joint_committee = crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Comisión Permanente", org_type="Comisión"),
+    )
+
+    assert scoped_committee.org_id != joint_committee.org_id
+    assert joint_committee.parent_org_id is None
+
+    found = crud_core.find_organization(
+        session,
+        org_name="Comisión Permanente",
+        org_type="Comisión",
+        parent_org_id=None,
+    )
+    assert found.org_id == joint_committee.org_id
+
+
+def test_find_organization_with_congreso_fallback_own_scope_hit(session):
+    """Tier 1: the own-chamber-scoped lookup succeeds directly, no fallback
+    needed."""
+    diputados = crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    committee = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comisión de Salud",
+            org_type="Comisión",
+            parent_org_name="Cámara de Diputados",
+            parent_org_type="Cámara",
+        ),
+    )
+
+    found = crud_core.find_organization_with_congreso_fallback(
+        session,
+        org_name="Comisión de Salud",
+        org_type="Comisión",
+        own_parent_org_id=diputados.org_id,
+    )
+    assert found.org_id == committee.org_id
+
+
+def test_find_organization_with_congreso_fallback_congreso_de_la_republica_hit(
+    session,
+):
+    """Tier 2: the own-chamber-scoped lookup misses, but the org is a child
+    of WHOLE_CONGRESS_ORG_NAME ("Congreso de la República") -- the current
+    convention for joint/bicameral bodies (see CHAMBER_LABEL_TO_ORG_NAME)."""
+    diputados = crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Congreso de la República", org_type="Cámara"),
+    )
+    joint_committee = crud_core.upsert_organization(
+        session,
+        schema.Organization(
+            org_name="Comisión Bicameral de Presupuesto y Cuenta General de la República",
+            org_type="Comisión",
+            parent_org_name="Congreso de la República",
+            parent_org_type="Cámara",
+        ),
+    )
+
+    found = crud_core.find_organization_with_congreso_fallback(
+        session,
+        org_name="Comisión Bicameral de Presupuesto y Cuenta General de la República",
+        org_type="Comisión",
+        own_parent_org_id=diputados.org_id,
+    )
+    assert found.org_id == joint_committee.org_id
+
+
+def test_find_organization_with_congreso_fallback_null_parent_hit(session):
+    """Tier 3 (transitional): both the own-chamber scope and the
+    "Congreso de la República" scope miss, but a NULL-parent row exists --
+    some joint-entity rows created before the WHOLE_CONGRESS_ORG_NAME
+    convention was unified may still be NULL-parent."""
+    diputados = crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Cámara de Diputados", org_type="Cámara"),
+    )
+    orphan_joint_committee = crud_core.upsert_organization(
+        session,
+        schema.Organization(org_name="Comisión Permanente", org_type="Administrativo"),
+    )
+
+    found = crud_core.find_organization_with_congreso_fallback(
+        session,
+        org_name="Comisión Permanente",
+        org_type="Administrativo",
+        own_parent_org_id=diputados.org_id,
+    )
+    assert found.org_id == orphan_joint_committee.org_id
+
+
+def test_upsert_model_writes_explicit_none_when_field_in_fields_set(session):
+    """The coalesce-skips-None rule in _upsert_model (see its own docstring
+    comment) has one correct override: fields_set lets a caller assert a
+    field's new value is genuinely None, not merely absent from this
+    source -- without it, a legitimate correction to None could never be
+    written once a row already has a non-null value."""
+    org = db_models.Organization(
+        org_name="Comisión de Prueba",
+        org_type=TypeOrganization.COMMITTEE.value,
+        org_link="https://old-link.example",
+    )
+    session.add(org)
+    session.flush()
+
+    # Without fields_set: a None in the payload is coalesced away (unchanged).
+    crud_core._upsert_model(
+        session,
+        existing=org,
+        model=db_models.Organization,
+        payload={"org_link": None},
+    )
+    assert org.org_link == "https://old-link.example"
+
+    # With fields_set: an explicit None is honored and written.
+    crud_core._upsert_model(
+        session,
+        existing=org,
+        model=db_models.Organization,
+        payload={"org_link": None},
+        fields_set={"org_link"},
+    )
+    assert org.org_link is None
+
+
 def test_membership_exists(session, create_congresista):
     cong = create_congresista()
     org = crud_core.upsert_organization(
