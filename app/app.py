@@ -1,4 +1,4 @@
-from flask import Flask, request, session
+from flask import Flask, render_template, request, session
 from flask_babel import Babel
 from app.routes.landing import landing_bp
 from app.routes.bills import bills_bp
@@ -57,6 +57,10 @@ def create_app():
     }
 
     babel.init_app(app, locale_selector=get_locale)
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template("errors/404.html"), 404
 
     api = Api(app)
     register_api(api)

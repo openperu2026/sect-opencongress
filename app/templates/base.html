@@ -45,9 +45,9 @@
         <div class="container footer-row">
             <ul class="footer-links">
                 <li><a href="{{ url_for('landing.index', _anchor='about') }}">{{ _('Acerca de') }}</a></li>
-                <li><a href="#">{{ _('Términos de servicio') }}</a></li>
-                <li><a href="#">{{ _('Privacidad') }}</a></li>
-                <li><a href="#">{{ _('Contacto') }}</a></li>
+                <li><span class="footer-link-disabled" title="{{ _('Próximamente') }}">{{ _('Términos de servicio') }}</span></li>
+                <li><span class="footer-link-disabled" title="{{ _('Próximamente') }}">{{ _('Privacidad') }}</span></li>
+                <li><a href="{{ url_for('landing.index', _anchor='contact') }}">{{ _('Contacto') }}</a></li>
             </ul>
         </div>
     </footer>

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Página no encontrada') }}{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-container hero-text">
+        <h1 class="hero-title">{{ _('Página no encontrada') }}</h1>
+
+        <p class="hero-description">
+            {{ _('No pudimos encontrar lo que buscas. Puede que el enlace sea incorrecto o que el contenido ya no esté disponible.') }}
+        </p>
+
+        <div class="menu-landing">
+            <div class="menu-card">
+                <a href="{{ url_for('landing.index') }}">{{ _('Ir a Inicio') }}</a>
+            </div>
+            <div class="menu-card">
+                <a href="{{ url_for('bills.index') }}">{{ _('Proyectos de ley') }}</a>
+            </div>
+            <div class="menu-card">
+                <a href="{{ url_for('congress.index') }}">{{ _('Congresista') }}</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

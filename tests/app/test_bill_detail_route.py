@@ -214,3 +214,20 @@ def test_detail_page_shows_author_party_and_committee(client, session_factory):
     assert "Ana Perez" in body
     assert "Partido:" in body
     assert "Partido Verde" in body
+
+
+def test_summary_is_labeled_untranslated_in_english(client, session_factory):
+    _seed_author_affiliations(session_factory)
+
+    body = client.get("/bills/2021_1234?lang=en").get_data(as_text=True)
+
+    assert "(Original text in Spanish)" in body
+
+
+def test_summary_is_not_labeled_untranslated_in_spanish(client, session_factory):
+    _seed_author_affiliations(session_factory)
+
+    body = client.get("/bills/2021_1234").get_data(as_text=True)
+
+    assert "(Original text in Spanish)" not in body
+    assert "(Texto original en español)" not in body

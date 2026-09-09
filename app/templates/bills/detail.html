@@ -47,6 +47,9 @@
 
       {% endif %}
       <p class="summary-label"><strong>{{_('Resumen')}}:</strong></p>
+      {% if (session.get('lang') or request.args.get('lang') or 'es') != 'es' %}
+        <p class="summary-untranslated-note">{{ _('(Texto original en español)') }}</p>
+      {% endif %}
       <p class="summary-text">{{ bill.summary_oc }}</p>
 
     </div>

@@ -245,6 +245,41 @@ def test_summarize_bill_from_db_single_paragraph_when_few_steps(
     assert "El Proyecto 2021_11" in out["summary"]
 
 
+@pytest.mark.parametrize(
+    "title, expected_article",
+    [
+        ("Proyecto de la nueva ley del docente", "el"),
+        ("Ley marco de prueba", "la"),
+        ("Decreto legislativo de prueba", "el"),
+        ("Reforma constitucional", "la"),
+    ],
+)
+def test_article_for_title_agrees_with_leading_noun_gender(title, expected_article):
+    assert summarization._article_for_title(title) == expected_article
+
+
+def test_summarize_bill_from_db_agrees_article_for_masculine_title(
+    patch_session, bill_factory, step_factory
+):
+    bill = bill_factory(
+        bill_id="2021_13",
+        title="Proyecto de la nueva ley del docente",
+    )
+    steps = [
+        step_factory(
+            step_type=TypeBillStep.PRESENTADO,
+            step_date=date(2021, 1, 10),
+            step_detail="Presentado",
+        ),
+    ]
+    patch_session(bill=bill, steps=steps)
+
+    out = summarization.summarize_bill_from_db("2021_13")
+
+    assert "aborda el Proyecto de la nueva ley del docente" in out["summary"]
+    assert "aborda la Proyecto" not in out["summary"]
+
+
 def test_summarize_bill_from_db_two_paragraphs_when_many_steps(
     patch_session, bill_factory, step_factory
 ):

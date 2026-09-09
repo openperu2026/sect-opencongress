@@ -197,7 +197,7 @@ def congress_detail(congresista_id):
         congresista_row = db.get(Congresista, int(congresista_id))
 
         if not congresista_row:
-            return "Not Found", 404
+            abort(404)
 
         congresista = _congresista_view(db, congresista_row)
 

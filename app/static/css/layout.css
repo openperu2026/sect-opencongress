@@ -778,6 +778,44 @@ main {
   .congress-mosaic {
     width: calc(100% - 32px);
   }
+
+  .search-results-table thead {
+    display: none;
+  }
+
+  .search-results-table,
+  .search-results-table tbody,
+  .search-results-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .search-results-table tr {
+    margin-bottom: 16px;
+    border: 1px solid #d8e0e8;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .search-results-table > :not(caption) > * > * {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  .search-results-table tr td:last-child {
+    border-bottom: none;
+  }
+
+  .search-results-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #5a1a1a;
+    flex-shrink: 0;
+  }
 }
 
 .btn-group {
@@ -931,6 +969,14 @@ main {
 .summary-text {
   max-width: 900px;
   margin-top: 0;
+}
+
+.summary-untranslated-note {
+  max-width: 900px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-muted, #6b7280);
 }
 
 .timeline-shell {
@@ -1419,6 +1465,12 @@ svg#seatsSvg circle { cursor: default; }
 
 .footer-links a:hover {
   text-decoration: underline;
+}
+
+.footer-link-disabled {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  cursor: default;
 }
 
 /*MENU*/

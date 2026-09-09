@@ -295,6 +295,104 @@ def test_search_results_cap_at_500_plus(client, session_factory):
     assert "Mostrando 1-50 de 500+ proyectos de ley" in body
 
 
+def test_search_filters_by_status_approved_alone(client, session_factory):
+    with session_factory() as db:
+        db.add_all(
+            [
+                Bill(
+                    id="2021_9001",
+                    title="Approved bill",
+                    summary_congreso="",
+                    observations="",
+                    status="presentado",
+                    proponent=Proponents.CONGRESO,
+                    bill_approved=True,
+                    summary_oc="",
+                    pley_id="2021_9001",
+                ),
+                Bill(
+                    id="2021_9002",
+                    title="Not approved bill",
+                    summary_congreso="",
+                    observations="",
+                    status="presentado",
+                    proponent=Proponents.CONGRESO,
+                    bill_approved=False,
+                    summary_oc="",
+                    pley_id="2021_9002",
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.get("/bills?status=approved")
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Mostrando" in body
+    assert "Approved bill" in body
+    assert "Not approved bill" not in body
+
+
+def test_search_filters_by_status_not_approved_alone(client, session_factory):
+    with session_factory() as db:
+        db.add_all(
+            [
+                Bill(
+                    id="2021_9001",
+                    title="Approved bill",
+                    summary_congreso="",
+                    observations="",
+                    status="presentado",
+                    proponent=Proponents.CONGRESO,
+                    bill_approved=True,
+                    summary_oc="",
+                    pley_id="2021_9001",
+                ),
+                Bill(
+                    id="2021_9002",
+                    title="Not approved bill",
+                    summary_congreso="",
+                    observations="",
+                    status="presentado",
+                    proponent=Proponents.CONGRESO,
+                    bill_approved=False,
+                    summary_oc="",
+                    pley_id="2021_9002",
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.get("/bills?status=not-approved")
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Mostrando" in body
+    assert "Not approved bill" in body
+    assert "Approved bill" not in body
+
+
+def test_status_all_does_not_force_search_path(client, session_factory):
+    _seed_bill_search_data(session_factory)
+
+    response = client.get("/bills?status=all")
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Mostrando" not in body
+    assert "Bill 0001" in body
+
+
+def test_footer_contact_link_points_to_contact_section(client):
+    response = client.get("/bills")
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<a href="/#contact">' in body
+    assert '<a href="#">' not in body
+
+
 def test_search_form_includes_new_filters(client):
     response = client.get("/bills")
     body = response.get_data(as_text=True)
@@ -361,6 +459,8 @@ def test_search_form_can_render_in_english(client):
     assert "Search the bill by:" in body
     assert "Presentation Date" in body
     assert "Author party" in body
+    assert 'placeholder="General search..."' in body
+    assert 'placeholder="Búsqueda general..."' not in body
 
 
 def test_recent_bills_falls_back_to_proponent_when_author_is_missing(
@@ -408,6 +508,54 @@ def test_recent_bills_falls_back_to_proponent_when_author_is_missing(
     assert response.status_code == 200
     assert "Bill without author" in body
     assert Proponents.CONGRESO.value in body
+
+
+def test_searched_results_fall_back_to_proponent_when_author_is_missing(
+    client, session_factory
+):
+    with session_factory() as db:
+        db.add_all(
+            [
+                Bill(
+                    id="2021_0200",
+                    title="Searchable bill without author",
+                    summary_congreso="",
+                    observations="",
+                    status="presentado",
+                    proponent=Proponents.CONGRESO,
+                    author_id=None,
+                    bill_approved=False,
+                    summary_oc="",
+                    pley_id="0200/2021-CR",
+                ),
+                Organization(
+                    org_id=200,
+                    org_name="Comisión Test 200",
+                    org_type=TypeOrganization.COMMITTEE,
+                    org_subtype=TypeCommittee.COM_ORD,
+                    org_link=None,
+                    parent_org_id=None,
+                    date_founding=None,
+                    date_dissolution=None,
+                ),
+                BillOrganization(
+                    bill_id="2021_0200",
+                    org_id=200,
+                    org_type=TypeOrganization.COMMITTEE,
+                    presentation_date=real_date(2024, 3, 1),
+                    decision_date=None,
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.get("/bills?title_q=Searchable")
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Searchable bill without author" in body
+    assert Proponents.CONGRESO.value in body
+    assert "None" not in body
 
 
 def test_search_filters_by_bill_diff(client, session_factory):

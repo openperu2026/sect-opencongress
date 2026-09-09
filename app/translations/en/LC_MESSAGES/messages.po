@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-03 17:08-0500\n"
+"POT-Creation-Date: 2026-09-08 19:36-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Open Peru Team\n"
 "Language: en\n"
@@ -18,29 +18,29 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/routes/bills.py:251 app/routes/congress.py:282
+#: app/routes/bills.py:284 app/routes/congress.py:315
 #: app/templates/bills/votes.html:77
 msgid "A favor"
 msgstr "In favor"
 
-#: app/routes/bills.py:252 app/routes/congress.py:289
+#: app/routes/bills.py:285 app/routes/congress.py:322
 #: app/templates/bills/votes.html:78
 msgid "En contra"
 msgstr "Against"
 
-#: app/routes/bills.py:253 app/templates/bills/votes.html:79
+#: app/routes/bills.py:286 app/templates/bills/votes.html:79
 msgid "Abstención"
 msgstr "Abstain"
 
-#: app/routes/bills.py:255 app/templates/bills/votes.html:80
+#: app/routes/bills.py:288 app/templates/bills/votes.html:80
 msgid "Otros"
 msgstr "Others"
 
-#: app/routes/bills.py:877 app/routes/bills.py:963
+#: app/routes/bills.py:1036 app/routes/bills.py:1122
 msgid "No aprobado"
 msgstr "Not approved"
 
-#: app/routes/bills.py:879 app/routes/bills.py:965
+#: app/routes/bills.py:1038 app/routes/bills.py:1124
 msgid "Aprobado"
 msgstr "Approved"
 
@@ -48,11 +48,10 @@ msgstr "Approved"
 #: app/templates/bills/votes.html:41 app/templates/bills/votes.html:118
 #: app/templates/bills/votes.html:124
 #: app/templates/congress/congress_detail.html:10
-#: app/templates/congress/search.html:99 app/templates/congress/search.html:100
 msgid "No disponible"
 msgstr "Not available"
 
-#: app/routes/congress.py:285 app/routes/congress.py:292
+#: app/routes/congress.py:318 app/routes/congress.py:325
 msgid ""
 "Los datos de votación aún no están disponibles. Este es contenido "
 "temporal para la vista de detalle del congresista."
@@ -61,10 +60,11 @@ msgstr ""
 "congressperson detail view."
 
 #: app/routes/landing.py:13 app/templates/base.html:28
+#: app/templates/errors/404.html:19
 msgid "Proyectos de ley"
 msgstr "Bills"
 
-#: app/routes/landing.py:14
+#: app/routes/landing.py:14 app/templates/congress/search.html:63
 msgid "Congresistas"
 msgstr "Congressmen"
 
@@ -90,6 +90,7 @@ msgid "Acerca de"
 msgstr "About"
 
 #: app/templates/base.html:29 app/templates/bills/votes.html:111
+#: app/templates/errors/404.html:22
 msgid "Congresista"
 msgstr "Congressmember"
 
@@ -105,6 +106,10 @@ msgstr "English"
 msgid "Español"
 msgstr "Spanish"
 
+#: app/templates/base.html:48 app/templates/base.html:49
+msgid "Próximamente"
+msgstr "Coming soon"
+
 #: app/templates/base.html:48
 msgid "Términos de servicio"
 msgstr "Terms of Service"
@@ -117,8 +122,8 @@ msgstr "Privacy"
 msgid "Contacto"
 msgstr "Contact"
 
-#: app/templates/bills/detail.html:29 app/templates/bills/search.html:80
-#: app/templates/bills/search.html:237 app/templates/bills/search.html:263
+#: app/templates/bills/detail.html:29 app/templates/bills/search.html:85
+#: app/templates/bills/search.html:289 app/templates/bills/search.html:315
 #: app/templates/bills/votes.html:28
 msgid "Fecha de presentación"
 msgstr "Presentation Date"
@@ -135,21 +140,20 @@ msgstr "days"
 msgid "Tiempo desde la presentación"
 msgstr "Time since presentation"
 
-#: app/templates/bills/detail.html:40 app/templates/bills/search.html:52
-#: app/templates/bills/search.html:228
+#: app/templates/bills/detail.html:40 app/templates/bills/search.html:57
+#: app/templates/bills/search.html:280
 msgid "Etapa actual"
 msgstr "Current Step"
 
 #: app/templates/bills/detail.html:43 app/templates/bills/detail.html:46
-#: app/templates/bills/search.html:13 app/templates/bills/search.html:180
-#: app/templates/bills/search.html:217 app/templates/bills/search.html:219
-#: app/templates/bills/search.html:262
+#: app/templates/bills/search.html:18 app/templates/bills/search.html:232
+#: app/templates/bills/search.html:269 app/templates/bills/search.html:271
+#: app/templates/bills/search.html:314
 msgid "Autor"
 msgstr "Author"
 
 #: app/templates/bills/detail.html:44 app/templates/bills/votes.html:112
-#: app/templates/congress/search.html:19 app/templates/congress/search.html:73
-#: app/templates/congress/search.html:90
+#: app/templates/congress/search.html:15 app/templates/congress/search.html:86
 msgid "Partido"
 msgstr "Party"
 
@@ -157,14 +161,17 @@ msgstr "Party"
 msgid "Resumen"
 msgstr "Summary"
 
-#: app/templates/bills/detail.html:66 app/templates/bills/detail.html:68
-#: app/templates/bills/search.html:201 app/templates/bills/search.html:279
+#: app/templates/bills/detail.html:51
+msgid "(Texto original en español)"
+msgstr "(Original text in Spanish)"
+
+#: app/templates/bills/detail.html:69 app/templates/bills/detail.html:71
+#: app/templates/bills/search.html:253 app/templates/bills/search.html:331
 #: app/templates/congress/congress_detail.html:91
-#: app/templates/congress/search.html:103
 msgid "Ver detalles"
 msgstr "View details"
 
-#: app/templates/bills/detail.html:72
+#: app/templates/bills/detail.html:75
 msgid "Ver cambios"
 msgstr "View changes"
 
@@ -238,71 +245,75 @@ msgstr "No difference data available."
 msgid "Busca el proyecto de ley por:"
 msgstr "Search the bill by:"
 
-#: app/templates/bills/search.html:9 app/templates/bills/search.html:179
-#: app/templates/bills/search.html:214 app/templates/bills/search.html:261
+#: app/templates/bills/search.html:9
+msgid "Búsqueda general..."
+msgstr "General search..."
+
+#: app/templates/bills/search.html:14 app/templates/bills/search.html:231
+#: app/templates/bills/search.html:266 app/templates/bills/search.html:313
 #: app/templates/congress/congress_detail.html:77
 msgid "Título"
 msgstr "Title"
 
-#: app/templates/bills/search.html:18 app/templates/congress/search.html:37
+#: app/templates/bills/search.html:23 app/templates/congress/search.html:33
 msgid "Comisión ordinaria"
 msgstr "Ordinary Committee"
 
-#: app/templates/bills/search.html:25 app/templates/congress/search.html:55
+#: app/templates/bills/search.html:30 app/templates/congress/search.html:51
 msgid "Buscar"
 msgstr "Search"
 
-#: app/templates/bills/search.html:30 app/templates/congress/search.html:60
+#: app/templates/bills/search.html:35 app/templates/congress/search.html:56
 msgid "Limpiar"
 msgstr "Clean"
 
-#: app/templates/bills/search.html:36
+#: app/templates/bills/search.html:41
 msgid "Opciones de búsqueda avanzada:"
 msgstr "Advanced Search Options:"
 
-#: app/templates/bills/search.html:43 app/templates/bills/search.html:222
+#: app/templates/bills/search.html:48 app/templates/bills/search.html:274
 msgid "Número de Proyecto de ley"
 msgstr "Bill ID"
 
-#: app/templates/bills/search.html:47 app/templates/bills/search.html:225
+#: app/templates/bills/search.html:52 app/templates/bills/search.html:277
 msgid "Número de la ley"
 msgstr "Law ID"
 
-#: app/templates/bills/search.html:61 app/templates/bills/search.html:231
+#: app/templates/bills/search.html:66 app/templates/bills/search.html:283
 msgid "Partido del autor"
 msgstr "Author party"
 
-#: app/templates/bills/search.html:70 app/templates/bills/search.html:243
-#: app/templates/congress/search.html:46 app/templates/congress/search.html:82
+#: app/templates/bills/search.html:75 app/templates/bills/search.html:295
+#: app/templates/congress/search.html:42 app/templates/congress/search.html:95
 msgid "Comisión especial"
 msgstr "Special Committee"
 
-#: app/templates/bills/search.html:83
+#: app/templates/bills/search.html:88 app/templates/bills/search.html:135
 msgid "Desde"
 msgstr "From"
 
-#: app/templates/bills/search.html:86 app/templates/bills/search.html:110
-msgid "Año"
-msgstr "Year"
-
-#: app/templates/bills/search.html:92 app/templates/bills/search.html:116
-msgid "Mes"
-msgstr "Month"
-
-#: app/templates/bills/search.html:98 app/templates/bills/search.html:122
-#: app/templates/bills/search.html:331
-msgid "Día"
-msgstr "Day"
-
-#: app/templates/bills/search.html:107
+#: app/templates/bills/search.html:111 app/templates/bills/search.html:159
 msgid "Hasta"
 msgstr "To"
 
-#: app/templates/bills/search.html:134 app/templates/bills/search.html:234
+#: app/templates/bills/search.html:138 app/templates/bills/search.html:162
+msgid "Año"
+msgstr "Year"
+
+#: app/templates/bills/search.html:144 app/templates/bills/search.html:168
+msgid "Mes"
+msgstr "Month"
+
+#: app/templates/bills/search.html:150 app/templates/bills/search.html:174
+#: app/templates/bills/search.html:559
+msgid "Día"
+msgstr "Day"
+
+#: app/templates/bills/search.html:186 app/templates/bills/search.html:286
 msgid "Tiene diferencia de versiones"
 msgstr "Has version differences"
 
-#: app/templates/bills/search.html:135
+#: app/templates/bills/search.html:187
 msgid ""
 "Refiere a que el proyecto de ley seleccionado tiene la posibilidad de "
 "verificar las diferencias entre diferentes versiones del proyecto durante"
@@ -311,7 +322,7 @@ msgstr ""
 "Indicates that the selected bill can be used to verify differences "
 "between versions during its presentation."
 
-#: app/templates/bills/search.html:139
+#: app/templates/bills/search.html:191
 msgid ""
 "Refiere a que tiene la posibilidad de verificar las diferencias entre "
 "diferentes versiones del proyecto durante su presentación"
@@ -319,83 +330,90 @@ msgstr ""
 "Indicates that it is possible to verify differences between versions of "
 "the bill during its presentation."
 
-#: app/templates/bills/search.html:144 app/templates/bills/search.html:153
+#: app/templates/bills/search.html:196 app/templates/bills/search.html:205
 msgid "Todos"
 msgstr "All bills"
 
-#: app/templates/bills/search.html:145 app/templates/bills/search.html:234
+#: app/templates/bills/search.html:197 app/templates/bills/search.html:286
 msgid "Sí"
 msgstr "Yes"
 
-#: app/templates/bills/search.html:146 app/templates/bills/search.html:234
+#: app/templates/bills/search.html:198 app/templates/bills/search.html:286
 msgid "No"
 msgstr "No"
 
-#: app/templates/bills/search.html:157 app/templates/bills/search.html:246
+#: app/templates/bills/search.html:209 app/templates/bills/search.html:298
 msgid "Proyectos de ley aprobados"
 msgstr "Approved bills"
 
-#: app/templates/bills/search.html:161 app/templates/bills/search.html:246
+#: app/templates/bills/search.html:213 app/templates/bills/search.html:298
 msgid "Proyectos de ley no aprobados"
 msgstr "Not approved bills"
 
-#: app/templates/bills/search.html:171
+#: app/templates/bills/search.html:223
 msgid "Proyectos de ley recientes"
 msgstr "Recent bills"
 
-#: app/templates/bills/search.html:178 app/templates/bills/search.html:260
+#: app/templates/bills/search.html:230 app/templates/bills/search.html:312
 #: app/templates/congress/congress_detail.html:76
 msgid "ID"
 msgstr "ID"
 
-#: app/templates/bills/search.html:181
+#: app/templates/bills/search.html:233
 msgid "Primera fecha de presentacion"
 msgstr "First presentation date"
 
-#: app/templates/bills/search.html:182 app/templates/bills/search.html:246
-#: app/templates/bills/search.html:264
+#: app/templates/bills/search.html:234 app/templates/bills/search.html:298
+#: app/templates/bills/search.html:316
 msgid "Estado"
 msgstr "Status"
 
-#: app/templates/bills/search.html:183 app/templates/bills/search.html:265
+#: app/templates/bills/search.html:235 app/templates/bills/search.html:317
 #: app/templates/congress/congress_detail.html:79
-#: app/templates/congress/search.html:92
 msgid "Detalle"
 msgstr "Detail"
 
-#: app/templates/bills/search.html:212 app/templates/congress/search.html:68
+#: app/templates/bills/search.html:264 app/templates/congress/search.html:81
 msgid "Criterios de búsqueda"
 msgstr "Search Criteria"
 
-#: app/templates/bills/search.html:240 app/templates/bills/votes.html:41
+#: app/templates/bills/search.html:292 app/templates/bills/votes.html:41
 msgid "Organización"
 msgstr "Organization"
 
-#: app/templates/bills/search.html:252
+#: app/templates/bills/search.html:304
 #, python-format
 msgid "Mostrando %(start)s-%(end)s de %(count)s proyectos de ley"
 msgstr "Showing %(start)s-%(end)s of %(count)s bills"
 
-#: app/templates/bills/search.html:288
+#: app/templates/bills/search.html:340
 msgid "Páginas de búsqueda"
 msgstr "Search pages"
 
-#: app/templates/bills/search.html:289
+#: app/templates/bills/search.html:341
 msgid "Página"
 msgstr "Page"
 
-#: app/templates/bills/search.html:302
+#: app/templates/bills/search.html:354
 msgid "Anterior"
 msgstr "Previous"
 
-#: app/templates/bills/search.html:306
+#: app/templates/bills/search.html:358
 msgid "Siguiente"
 msgstr "Next"
 
-#: app/templates/bills/search.html:312
+#: app/templates/bills/search.html:364
 #: app/templates/congress/congress_detail.html:99
 msgid "No se encontraron proyectos de ley."
 msgstr "No authored bills found."
+
+#: app/templates/bills/search.html:453
+msgid "Mes anterior"
+msgstr "Previous"
+
+#: app/templates/bills/search.html:462
+msgid "Mes siguiente"
+msgstr "Next"
 
 #: app/templates/bills/votes.html:40
 msgid "Fecha de votacion"
@@ -435,6 +453,7 @@ msgid "%(count)s votos obtenidos"
 msgstr "%(count)s votes obtained"
 
 #: app/templates/congress/congress_detail.html:22
+#: app/templates/congress/search.html:70
 #, python-format
 msgid "Foto de %(name)s"
 msgstr "Photo of %(name)s"
@@ -489,27 +508,41 @@ msgstr "View all bills authored"
 msgid "Perfil oficial del congresista"
 msgstr "Official congress profile"
 
-#: app/templates/congress/search.html:7
+#: app/templates/congress/search.html:6
 msgid "Busca al congresista por:"
 msgstr "Search a congressmember by:"
 
-#: app/templates/congress/search.html:13 app/templates/congress/search.html:70
-#: app/templates/congress/search.html:89
+#: app/templates/congress/search.html:10 app/templates/congress/search.html:83
 msgid "Nombre"
 msgstr "Name"
 
-#: app/templates/congress/search.html:28 app/templates/congress/search.html:76
-#: app/templates/congress/search.html:91
+#: app/templates/congress/search.html:24 app/templates/congress/search.html:89
 msgid "Región"
 msgstr "Region"
 
-#: app/templates/congress/search.html:79
+#: app/templates/congress/search.html:92
 msgid "Comisión"
 msgstr "Commission"
 
-#: app/templates/congress/search.html:111
+#: app/templates/congress/search.html:100
 msgid "No se encontraron congresistas."
 msgstr "No matching congresspeople found."
+
+#: app/templates/errors/404.html:3 app/templates/errors/404.html:8
+msgid "Página no encontrada"
+msgstr "Page not found"
+
+#: app/templates/errors/404.html:11
+msgid ""
+"No pudimos encontrar lo que buscas. Puede que el enlace sea incorrecto o "
+"que el contenido ya no esté disponible."
+msgstr ""
+"We couldn't find what you're looking for. The link may be incorrect or "
+"the content may no longer be available."
+
+#: app/templates/errors/404.html:16
+msgid "Ir a Inicio"
+msgstr "Go to Home"
 
 #: app/templates/landing/index.html:7
 msgid "Bienvenido a Open Peru"

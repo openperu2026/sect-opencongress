@@ -24,6 +24,18 @@ MONTHS_ES = {
     12: "diciembre",
 }
 
+MASCULINE_LEADING_WORDS = {
+    "proyecto",
+    "decreto",
+    "reglamento",
+    "codigo",
+    "código",
+    "regimen",
+    "régimen",
+    "sistema",
+    "programa",
+}
+
 OBSERVED_AUTOGRAPH_NEEDLES = ("autógrafa observada", "autografa observada")
 MAJORITY_NEEDLES = ("en mayoría", "en mayoria")
 NO_APPROVAL_NEEDLES = ("no aprobación", "no aprobacion", "archivo")
@@ -322,15 +334,29 @@ def _has_second_vote_exoneration(step: db_models.BillStep) -> bool:
     )
 
 
+def _article_for_title(title: str) -> str:
+    """Pick the grammatically-agreeing definite article ("el"/"la") for the
+    leading noun of a bill title, defaulting to "la" (the most common case,
+    e.g. titles starting with "Ley ...") when the leading word isn't a known
+    masculine noun."""
+    first_word = title.strip().split(maxsplit=1)[0].lower() if title.strip() else ""
+    first_word = first_word.strip(".,;:")
+    if first_word in MASCULINE_LEADING_WORDS:
+        return "el"
+    return "la"
+
+
 def _paragraph_one(
     bill_id: str, bill: db_models.Bill, steps: list[db_models.BillStep]
 ) -> str:
     start_date = steps[0].step_date
     title = _clean_text(bill.title)
     start_month_year = _format_month_year(start_date)
+    article = _article_for_title(title)
 
     sentence_one = (
-        f"El Proyecto {bill_id}, presentado en {start_month_year}, aborda la {title}."
+        f"El Proyecto {bill_id}, presentado en {start_month_year}, "
+        f"aborda {article} {title}."
     )
 
     ranked_steps = _rank_steps(steps)

@@ -238,17 +238,17 @@
         <tbody>
             {% for bill in recent_bills %}
             <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ bill.pley_id }}</td>
-                <td>{{ bill.title }}</td>
+                <td data-label="#">{{ loop.index }}</td>
+                <td data-label="{{ _('ID') }}">{{ bill.pley_id }}</td>
+                <td data-label="{{ _('Título') }}">{{ bill.title }}</td>
                 {% if bill.author_name %}
-                    <td>{{ bill.author_name }}</td>
+                    <td data-label="{{ _('Autor') }}">{{ bill.author_name }}</td>
                 {% else %}
-                    <td>{{ bill.proponent.value }}</td>
+                    <td data-label="{{ _('Autor') }}">{{ bill.proponent.value }}</td>
                 {% endif %}
-                <td>{{ bill.presentation_date }}</td>
-                <td>{{ bill.status }}</td>
-                <td>
+                <td data-label="{{ _('Primera fecha de presentacion') }}">{{ bill.presentation_date }}</td>
+                <td data-label="{{ _('Estado') }}">{{ bill.status }}</td>
+                <td data-label="{{ _('Detalle') }}">
                     <a href="{{ url_for('bills.bill_detail', bill_id=bill.id) }}" class="btn btn-primary btn-sm">
                         {{_('Ver detalles')}}
                     </a>
@@ -320,13 +320,17 @@
         <tbody>
             {% for bill in bills %}
             <tr>
-                <td>{{ results_start + loop.index0 }}</td>
-                <td>{{ bill.pley_id }}</td>
-                <td>{{ bill.title }}</td>
-                <td>{{ bill.author_name }}</td>
-                <td>{{ bill.presentation_date }}</td>
-                <td>{{ bill.status }}</td>
-                <td>
+                <td data-label="#">{{ results_start + loop.index0 }}</td>
+                <td data-label="{{ _('ID') }}">{{ bill.pley_id }}</td>
+                <td data-label="{{ _('Título') }}">{{ bill.title }}</td>
+                {% if bill.author_name %}
+                    <td data-label="{{ _('Autor') }}">{{ bill.author_name }}</td>
+                {% else %}
+                    <td data-label="{{ _('Autor') }}">{{ bill.proponent.value }}</td>
+                {% endif %}
+                <td data-label="{{ _('Fecha de presentación') }}">{{ bill.presentation_date }}</td>
+                <td data-label="{{ _('Estado') }}">{{ bill.status }}</td>
+                <td data-label="{{ _('Detalle') }}">
                     <a href="{{ url_for('bills.bill_detail', bill_id=bill.id) }}" class="btn btn-primary btn-sm">
                         {{_('Ver detalles')}}
                     </a>

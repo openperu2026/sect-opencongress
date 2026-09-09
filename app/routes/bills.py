@@ -9,6 +9,7 @@ import re
 import textwrap
 from flask import (
     Blueprint,
+    abort,
     current_app,
     make_response,
     render_template,
@@ -640,6 +641,7 @@ def index():
             organization_name_q,
             special_committee_q,
             bill_diff_q,
+            status != "all",
         ]
     )
 
@@ -985,7 +987,7 @@ def bill_detail(bill_id):
     with SessionProcessed() as db:
         bill = db.get(Bill, bill_id)
         if not bill:
-            return "Not Found", 404
+            abort(404)
 
         all_steps, latest_step = extract_steps(db, bill_id)
 
@@ -1071,7 +1073,7 @@ def votes(bill_id, vote_event_id):
     with SessionProcessed() as db:
         bill = db.get(Bill, bill_id)
         if not bill:
-            return "Not Found", 404
+            abort(404)
 
         vote_event = db.execute(
             select(VoteEvent).where(
@@ -1081,7 +1083,7 @@ def votes(bill_id, vote_event_id):
         ).scalar_one_or_none()
 
         if vote_event is None:
-            return "Not Found", 404
+            abort(404)
 
         vote_step = db.execute(
             select(BillStep)
@@ -1229,11 +1231,11 @@ def bill_difference(bill_id, step_id):
     with SessionProcessed() as db:
         bill = db.get(Bill, bill_id)
         if not bill:
-            return "Not Found", 404
+            abort(404)
 
         step = db.get(BillStep, (bill_id, step_id))
         if not step:
-            return "Not Found", 404
+            abort(404)
 
         diff = db.get(BillDifference, (bill_id, step_id))
 
